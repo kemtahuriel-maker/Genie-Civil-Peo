@@ -1,0 +1,27 @@
+{
+  "chantiers": [
+    {
+      "id": 1,
+      "code": "CH-2026-001",
+      "nom": "Construction Immeuble R+4 Omnisport",
+      "budget_fcfa": 450000000.0,
+      "date_debut": "2026-01-15",
+      "date_fin_prevue": "2026-12-30",
+      "client": "SCI Immobilière du Mfoundi",
+      "localisation": "Yaoundé, Cameroun",
+      "statut": "en_cours",
+      "supprime": 0
+    }
+  ],
+  "utilisateurs": [
+    {
+      "id": 1,
+      "identifiant": "admin",
+      "nom_complet": "Jean Dupont",
+      "mot_de_passe_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "role": "admin",
+      "actif": 1,
+      "derniere_connexion": "2026-10-24 08:00:00"
+    }
+  ]
+}

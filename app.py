@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 # Génie Civil Pro : application autonome, données séparées du code.
 SCHEMA_SQL = "CREATE TABLE IF NOT EXISTS utilisateurs (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                identifiant TEXT UNIQUE NOT NULL,\n                nom_complet TEXT NOT NULL,\n                mot_de_passe_hash TEXT NOT NULL,\n                role TEXT NOT NULL,\n                actif INTEGER NOT NULL DEFAULT 1,\n                derniere_connexion TEXT\n            );\nCREATE TABLE IF NOT EXISTS chantiers (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                code TEXT UNIQUE NOT NULL,\n                nom TEXT NOT NULL,\n                budget_fcfa REAL NOT NULL,\n                date_debut TEXT NOT NULL,\n                date_fin_prevue TEXT NOT NULL,\n                client TEXT,\n                localisation TEXT,\n                statut TEXT NOT NULL DEFAULT 'en_cours',\n                supprime INTEGER DEFAULT 0\n            );\nCREATE TABLE IF NOT EXISTS journalier (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                chantier_id INTEGER NOT NULL,\n                date_jour TEXT NOT NULL,\n                meteo TEXT,\n                effectif INTEGER,\n                travaux_realises TEXT,\n                incidents TEXT,\n                supprime INTEGER DEFAULT 0,\n                FOREIGN KEY (chantier_id) REFERENCES chantiers(id)\n            );\nCREATE TABLE IF NOT EXISTS malfacons (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                chantier_id INTEGER NOT NULL,\n                element TEXT NOT NULL,\n                type_defaut TEXT NOT NULL,\n                criticite TEXT NOT NULL,\n                description TEXT,\n                action_corrective TEXT,\n                statut_resolution TEXT NOT NULL DEFAULT 'Ouvert',\n                date_signalement TEXT NOT NULL,\n                supprime INTEGER DEFAULT 0,\n                FOREIGN KEY (chantier_id) REFERENCES chantiers(id)\n            );\nCREATE TABLE IF NOT EXISTS depenses (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                chantier_id INTEGER NOT NULL,\n                categorie TEXT NOT NULL,\n                libelle TEXT NOT NULL,\n                montant_fcfa REAL NOT NULL,\n                date_depense TEXT NOT NULL,\n                reference_piece TEXT,\n                supprime INTEGER DEFAULT 0,\n                FOREIGN KEY (chantier_id) REFERENCES chantiers(id)\n            );\nCREATE TABLE IF NOT EXISTS avancement (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                chantier_id INTEGER NOT NULL,\n                pourcentage REAL NOT NULL,\n                description TEXT,\n                date_saisie TEXT NOT NULL,\n                supprime INTEGER DEFAULT 0,\n                FOREIGN KEY (chantier_id) REFERENCES chantiers(id)\n            );\nCREATE TABLE IF NOT EXISTS materiel (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                chantier_id INTEGER NOT NULL,\n                designation TEXT NOT NULL,\n                quantite REAL NOT NULL,\n                unite TEXT NOT NULL,\n                date_reception TEXT NOT NULL,\n                supprime INTEGER DEFAULT 0,\n                FOREIGN KEY (chantier_id) REFERENCES chantiers(id)\n            );\nCREATE TABLE IF NOT EXISTS devis (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                chantier_id INTEGER NOT NULL,\n                numero TEXT UNIQUE NOT NULL,\n                objet TEXT NOT NULL,\n                tva_pct REAL NOT NULL DEFAULT 19.25,\n                statut TEXT NOT NULL DEFAULT 'brouillon',\n                supprime INTEGER DEFAULT 0,\n                FOREIGN KEY(chantier_id) REFERENCES chantiers(id)\n            );\nCREATE TABLE IF NOT EXISTS lignes_devis (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                devis_id INTEGER NOT NULL,\n                designation TEXT NOT NULL,\n                unite TEXT NOT NULL,\n                quantite REAL NOT NULL,\n                prix_unitaire_fcfa REAL NOT NULL,\n                supprime INTEGER DEFAULT 0,\n                FOREIGN KEY(devis_id) REFERENCES devis(id)\n            );\nCREATE TABLE IF NOT EXISTS historique (\n                id INTEGER PRIMARY KEY AUTOINCREMENT,\n                table_nom TEXT NOT NULL,\n                row_id INTEGER NOT NULL,\n                operation TEXT NOT NULL,\n                nouvelles_valeurs TEXT,\n                utilisateur TEXT,\n                ts TEXT NOT NULL\n            );\n"
@@ -773,10 +774,11 @@ def draw_positive(rng, mean, cv, n, law):
         sigma=np.sqrt(np.log1p(cv*cv))
         return mean*np.exp(sigma*z-sigma*sigma/2)
     return mean*(1+np.sqrt(3)*cv*(2*stats.norm.cdf(z)-1))
+@st.cache_data
 def exact_probability(mask):
     n=len(mask); count=int(np.count_nonzero(mask))
     ci=stats.binomtest(count,n).proportion_ci(confidence_level=.95,method='exact')
-    return dict(p=count/n,low=float(ci.low),high=float(ci.high),count=count,n=n)@st.cache_resource
+    return dict(p=count/n,low=float(ci.low),high=float(ci.high),count=count,n=n)
 def beam_influences():
     import sympy as sp
     from sympy.physics.continuum_mechanics.beam import Beam
@@ -789,13 +791,14 @@ def beam_influences():
         beam.solve_for_reaction_loads(ra,rb)
         output.append({name:sp.lambdify(x,expr.rewrite(sp.Piecewise),'numpy') for name,expr in [('V',beam.shear_force()),('M',beam.bending_moment()),('y',beam.deflection())]})
     return output
+@st.cache_data(ttl=1800, max_entries=6)
 def beam_nominal(c):
     length=c['L']; b=c['b']/1000; h=c['h']/1000
     inertia=b*h**3/12; section=b*h*h/6
     moment=c['P']*1000*length/4+c['q']*1000*length*length/8
     stress=moment/section/1e6
     deflection=(c['P']*1000*length**3/48+5*c['q']*1000*length**4/384)/(c['E']*1e9*inertia)*1000
-    return dict(M=moment/1000,sigma=stress,delta=deflection,I=inertia,W=section)@st.cache_data(ttl=1800,max_entries=6)
+    return dict(M=moment/1000,sigma=stress,delta=deflection,I=inertia,W=section)
 def compute_analysis(serialized):
     c=validate_analysis(json.loads(serialized)); k=c['kind']; n=c['n']; rng=np.random.default_rng(c['seed']); inputs={}
     if k=='Coûts':

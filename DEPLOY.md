@@ -7,6 +7,8 @@
    python -m venv venv
    venv\Scripts\activate        (Mac/Linux: source venv/bin/activate)
    pip install -r requirements.txt
+
+   // now run this
    streamlit run app.py
    ```
 3. Click through every section. With no passwords set the app is open (local use only).
