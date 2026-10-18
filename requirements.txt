@@ -1,0 +1,12 @@
+streamlit>=1.50
+pandas
+numpy
+scipy
+plotly
+matplotlib
+reportlab
+openpyxl
+pillow
+pypdf
+sympy
+psycopg[binary]
